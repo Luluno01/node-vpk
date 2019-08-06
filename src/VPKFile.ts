@@ -186,7 +186,7 @@ export class VPKFile {
         this.data.copy(buff, preloadBytes, entryOffset, entryLength)
       } else {
         const archivePath = this.path.replace(/_dir\.vpk$/, `_${archiveIndex.toString().padStart(3, '0')}.vpk`)
-        const fd = await open(archivePath, 'r')
+        const fd = this.fdCache.get(archiveIndex) || await open(archivePath, 'r')
         this.fdCache.set(archiveIndex, fd)
         const { bytesRead } = await read(fd, buff, preloadBytes, entryLength, entryOffset)
         assert(bytesRead == entryLength, `Cannot read file from sub-archive ${archivePath}`)
