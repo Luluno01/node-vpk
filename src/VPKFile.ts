@@ -27,9 +27,18 @@ export class VPKFile {
    * Magic
    */
   private static readonly SIGNATURE = 0x55aa1234
+  /**
+   * Header size (directory tree not included) of VPK V1 in bytes
+   */
   private static readonly HEADER_SIZE_V1 = 3 * 4
+  /**
+   * Header size (directory tree not included) of VPK V2 in bytes
+   */
   private static readonly HEADER_SIZE_V2 = 7 * 4
 
+  /**
+   * Underlying VPK file version
+   */
   public version: number
   /**
    * How many bytes of file content are stored in this VPK file (0 in CSGO)
@@ -55,27 +64,31 @@ export class VPKFile {
    */
   private signatureSectionSize: number
 
+  /**
+   * VPK directory file path
+   */
   public path: string
   /**
    * File entries (path => meta)
    */
   public entries: Map<string, VPKEntryMeta> = new Map
-  /**
-   * Offset of embeded file (stored in the directory file, e.g.
-   * `pak01_dir.vpk` directly) data
-   */
-  public dataOffset: number
 
+  /**
+   * Content of the VPK directory file (without header and directory tree)
+   */
   private data: Buffer
   /**
    * FD cache (archiveIndex => fd)
    */
   private fdCache: Map<number, number> = new Map
-  
+
+  /**
+   * Load VPK file from designated file
+   * @param path Path to VPK directory file
+   */
   public static async fromFile(path: string) {
     const file = new VPKFile
     const data = await readFile(path)
-    file.data = data
     file.path = path
 
     const parser = new BinaryParser(data)
@@ -92,8 +105,10 @@ export class VPKFile {
     // TreeSize
     const treeSize = parser.readUInt32LE()
 
+    let dataOffset: number
+
     if(version == 2) {
-      file.dataOffset = VPKFile.HEADER_SIZE_V2 + treeSize
+      dataOffset = VPKFile.HEADER_SIZE_V2 + treeSize
 
       // FileDataSectionSize
       file.fileDataSectionSize = parser.readUInt32LE()
@@ -108,7 +123,7 @@ export class VPKFile {
       // SignatureSectionSize
       file.signatureSectionSize = parser.readUInt32LE()
     } else {
-      file.dataOffset = VPKFile.HEADER_SIZE_V1 + treeSize
+      dataOffset = VPKFile.HEADER_SIZE_V1 + treeSize
     }
 
     // Tree
@@ -146,9 +161,17 @@ export class VPKFile {
         }  // File name
       }  // Folder
     }  // Extension
+    file.data = data.subarray(dataOffset)
     return file
   }
 
+  /**
+   * 
+   * @param path File path inside the VPK file(s)
+   * (e.g. scripts/items/items_game.txt)
+   * @param validate Whether to validate extracted file or not (throw an error
+   * when validation failed)
+   */
   public async readFile(path: string, validate: boolean = false) {
     path = path.replace(/\\/g, '/')
     const { entries } = this
@@ -160,7 +183,7 @@ export class VPKFile {
     }
     if(entryLength > 0) {
       if(archiveIndex == 0x7fff) {
-        this.data.copy(buff, preloadBytes, this.dataOffset + entryOffset, entryLength)
+        this.data.copy(buff, preloadBytes, entryOffset, entryLength)
       } else {
         const archivePath = this.path.replace(/_dir\.vpk$/, `_${archiveIndex.toString().padStart(3, '0')}.vpk`)
         const fd = await open(archivePath, 'r')
@@ -175,6 +198,9 @@ export class VPKFile {
     return buff
   }
 
+  /**
+   * Close all open sub-archives
+   */
   public async closeSubArchives() {
     const cache = new Map(this.fdCache.entries())
     this.fdCache.clear()
