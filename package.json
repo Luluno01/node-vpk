@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "VPK reader",
   "main": "build/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Luluno01/node-vpk.git"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
