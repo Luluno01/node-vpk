@@ -175,7 +175,7 @@ export class VPKFile {
   public async readFile(path: string, validate: boolean = false) {
     path = path.replace(/\\/g, '/')
     const { entries } = this
-    assert(entries.has(path), 'File not found')
+    assert(entries.has(path), `File ${path} not found`)
     const { archiveIndex, entryOffset, preloadBytes, preload, entryLength, CRC } = entries.get(path)!
     const buff = Buffer.alloc(preloadBytes + entryLength)
     if(preload) {
