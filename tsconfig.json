@@ -5,7 +5,10 @@
     "noImplicitAny": false,
     "outDir": "build",
     "sourceMap": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "declarationDir": "@types",
+    "declarationMap": true,
+    "declaration": true
   },
   "include": [
     "src/**/*.ts"
